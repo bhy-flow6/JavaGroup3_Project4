@@ -20,6 +20,9 @@ public class PatronGUIStarter extends JFrame {
     private final JButton finishButton = new JButton("Finish Checkout");
     private final JButton resetButton = new JButton("Start Over");
 
+    // Backend: user catalog for UC1 card validation (sample data until a real data source exists).
+    private final UserCatalog userCatalog = UserCatalog.withSampleData();
+
     public PatronGUIStarter() {
         super("Library Checkout System - Patron Kiosk (UI Prototype)");
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
@@ -78,17 +81,41 @@ public class PatronGUIStarter extends JFrame {
     }
 
     private void onValidateCard() {
-        String cardNumber = cardField.getText().trim();
-        if (cardNumber.isEmpty()) {
+        String cardText = cardField.getText().trim();
+        if (cardText.isEmpty()) {
             setStatus("Enter or scan a library card number first.");
             return;
         }
-        // TODO: Call LibraryController -> UserCatalog for real validation.
-        setStatus("Card " + cardNumber + " entered. Validation is not connected yet.");
-        JOptionPane.showMessageDialog(this,
-                "The interface is working, but card validation must be connected to the team's backend.",
-                "Backend not connected", JOptionPane.INFORMATION_MESSAGE);
-        // Keep book checkout disabled until a real validation result is available.
+        // UC1 Validate Library Card: look up the card in the UserCatalog.
+        // TODO: route through LibraryController once it exists.
+        CardStatus status = userCatalog.validateCard(cardText);
+        Patron patron = null;
+        try {
+            patron = userCatalog.searchByCardNumber(Integer.parseInt(cardText)).orElse(null);
+        } catch (NumberFormatException e) {
+            // Non-numeric input: no patron, status is already NOT_FOUND.
+        }
+        String message = status.getMessage(patron);
+        setStatus(message);
+
+        if (status.canCheckOut()) {
+            // Approved (possibly with an expiration warning): unlock book scanning.
+            cardField.setEnabled(false);
+            validateButton.setEnabled(false);
+            bookField.setEnabled(true);
+            addBookButton.setEnabled(true);
+            bookField.requestFocusInWindow();
+            if (status == CardStatus.EXPIRING_SOON) {
+                JOptionPane.showMessageDialog(this, message,
+                        "Card expiring soon", JOptionPane.WARNING_MESSAGE);
+            }
+        } else {
+            // Not found, expired, or on hold: checkout stays locked.
+            JOptionPane.showMessageDialog(this, message,
+                    "Card not accepted", JOptionPane.ERROR_MESSAGE);
+            cardField.selectAll();
+            cardField.requestFocusInWindow();
+        }
     }
 
     private void onScanBook() {
@@ -112,6 +139,8 @@ public class PatronGUIStarter extends JFrame {
 
     private void resetSession() {
         cardField.setText("");
+        cardField.setEnabled(true);
+        validateButton.setEnabled(true);
         bookField.setText("");
         scannedBooks.clear();
         bookField.setEnabled(false);
