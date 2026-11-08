@@ -7,7 +7,7 @@ public class Receipt {
 // ATTRIBUTES ====================================
 	private static int LAST_ID = 0;
 	private int receiptID;
-	private LocalDate issueDate;
+	private LocalDate createDate;
 	private ArrayList<Book> cart;
 	
 // GETTERS/SETTERS ===============================
@@ -21,6 +21,10 @@ public class Receipt {
 	
 	public Book getReceiptBook(int i) {		
 		return cart.get(i);
+	}
+	
+	public ArrayList<Book> getCart(){
+		return cart;
 	}
 	
 // CONSTRUCTORS===================================
@@ -48,8 +52,8 @@ public class Receipt {
 	}
 	
 	public String printReceipt() {
-		issueDate = LocalDate.now();
-		String msg = "Receipt as of " + issueDate + "\n";
+		createDate = LocalDate.now();
+		String msg = "Receipt as of " + createDate + "\n";
 		for (Book b : cart) {
 			msg += b.printInfo() + "\n";
 		}
