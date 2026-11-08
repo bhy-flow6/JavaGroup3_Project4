@@ -15,6 +15,14 @@ public class Receipt {
 		return receiptID;
 	}
 	
+	public int getReceiptSize() {
+		return cart.size();
+	}
+	
+	public Book getReceiptBook(int i) {		
+		return cart.get(i);
+	}
+	
 // CONSTRUCTORS===================================
 	public Receipt() {
 		LAST_ID++;
@@ -28,16 +36,20 @@ public class Receipt {
 		receiptID = LAST_ID;
 		cart = new ArrayList<>();
 		
-		cart.add(new Book("Object Oriented Software Engineering", "David Kung", "978-0-07-3376257", 1));
+		cart.add(new Book("Object Oriented Software Engineering", "David Kung", "978-0-07-3376257", 1001));
+		cart.add(new Book("Software Engineering", "David Kung", "978-1-26-4556953", 1002));
 	}
 	
 // METHODS =======================================
 	public void addBook (Book b) {
-		cart.add(b);
+		if (b.isAvailable()) {
+			cart.add(b);
+		} 
 	}
 	
 	public String printReceipt() {
-		String msg = "Receipt as of " + LocalDate.now() + "\n";
+		issueDate = LocalDate.now();
+		String msg = "Receipt as of " + issueDate + "\n";
 		for (Book b : cart) {
 			msg += b.printInfo() + "\n";
 		}

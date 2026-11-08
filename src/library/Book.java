@@ -54,6 +54,6 @@ public class Book {
 	 }
 	 
 	 public String printInfo () {
-		 return title + " by " + author + " (ISBN: " + isbn + " Barcode: " + barcodeID;
+		 return title + " by " + author + " (ISBN: " + isbn + " / Barcode: " + barcodeID + ")";
 	 }
 }

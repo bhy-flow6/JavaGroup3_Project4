@@ -8,6 +8,7 @@ package library;
 import java.time.LocalDate;
 import java.util.ArrayList;
 
+
 public class BookCatalog {
 // ATTRIBUTES ====================================
 	private LocalDate lastUpdated;
@@ -25,10 +26,10 @@ public class BookCatalog {
 		lastUpdated = LocalDate.now();
 		
 		// Manually created books
-		catalog.add(new Book("Object Oriented Software Engineering", "David Kung", "978-0-07-3376257", 1));
-		catalog.add(new Book("Software Engineering", "David Kung", "978-1-26-4556953", 2));
-		catalog.add(new Book("The Lion, the Witch, and the Wardrobe", "CS Lewis", "978-0-06-4471046", 3));
-		catalog.add(new Book("The Fellowship of the Ring", "JRR Tolkien", "978-0-26-1102354", 4, "Checked Out"));
+		catalog.add(new Book("Object Oriented Software Engineering", "David Kung", "978-0-07-3376257", 1001));
+		catalog.add(new Book("Software Engineering", "David Kung", "978-1-26-4556953", 1002));
+		catalog.add(new Book("The Lion, the Witch, and the Wardrobe", "CS Lewis", "978-0-06-4471046", 1003));
+		catalog.add(new Book("The Fellowship of the Ring", "JRR Tolkien", "978-0-26-1102354", 1004, "Checked Out"));
 				
 	}
 
@@ -58,6 +59,7 @@ public class BookCatalog {
 	
 	public boolean checkAvailable(int bID) {
 		Book b = searchByBarcode(bID);
+		
 		if(b != null) {
 			return b.isAvailable();
 		} else {
@@ -65,6 +67,10 @@ public class BookCatalog {
 		}
 	}
 	
-	//public void checkOutBooks() {}
-
+	public void checkOutBooks(Receipt r) {
+		for(int i = 0; i < r.getReceiptSize(); i++) {
+			int bID = r.getReceiptBook(i).getBarcodeID();
+			searchByBarcode(bID).checkOut();
+		}
+	}
 }
