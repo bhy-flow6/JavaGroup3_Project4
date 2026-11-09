@@ -1,6 +1,12 @@
 package library;
 
 import java.time.LocalDate;
+
+/* Receipt is the "shopping cart" of for checkouts, storing Books until the checkout is finalized
+*  Receipts are no longer used after each checkout process, all relevant information is stored
+*  in Loan
+*/ 
+
 import java.util.ArrayList;
 
 public class Receipt {

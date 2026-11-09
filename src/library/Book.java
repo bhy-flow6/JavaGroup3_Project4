@@ -1,7 +1,5 @@
 package library;
 
-
-
 public class Book {
 // ATTRIBUTES ====================================
 	private String title;
