@@ -5,9 +5,9 @@ import javax.swing.border.EmptyBorder;
 import java.awt.*;
 
 /**
- * A UI-only Swing prototype for the Library Checkout System.
- * Backend validation, barcode lookup, loan creation and receipt delivery
- * are not implemented here. Connect this view to the team's controller.
+ * Patron-facing Swing kiosk for the Library Checkout System MVP.
+ * Uses existing catalogs directly; LibraryController is not modified.
+ * Printing/email delivery is simulated by on-screen confirmation only.
  */
 public class PatronGUIStarter extends JFrame {
     private final JTextField cardField = new JTextField(20);
@@ -20,11 +20,22 @@ public class PatronGUIStarter extends JFrame {
     private final JButton finishButton = new JButton("Finish Checkout");
     private final JButton resetButton = new JButton("Start Over");
 
-    // Backend: user catalog for UC1 card validation (sample data until a real data source exists).
-    private final UserCatalog userCatalog = UserCatalog.withSampleData();
+    private final UserCatalog userCatalog;
+    private final BookCatalog bookCatalog;
+    private final LoanCatalog loanCatalog;
+    private final ReminderCatalog reminderCatalog;
 
-    public PatronGUIStarter() {
-        super("Library Checkout System - Patron Kiosk (UI Prototype)");
+    private Patron currentPatron;
+    private Receipt currentReceipt;
+
+    public PatronGUIStarter(UserCatalog users, BookCatalog books,
+            LoanCatalog loans, ReminderCatalog reminders) {
+        super("Library Checkout System - Patron Kiosk");
+        this.userCatalog = users;
+        this.bookCatalog = books;
+        this.loanCatalog = loans;
+        this.reminderCatalog = reminders;
+
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setMinimumSize(new Dimension(660, 490));
         setLocationRelativeTo(null);
@@ -86,62 +97,125 @@ public class PatronGUIStarter extends JFrame {
             setStatus("Enter or scan a library card number first.");
             return;
         }
-        // UC1 Validate Library Card: look up the card in the UserCatalog.
-        // TODO: route through LibraryController once it exists.
+
         CardStatus status = userCatalog.validateCard(cardText);
         Patron patron = null;
         try {
             patron = userCatalog.searchByCardNumber(Integer.parseInt(cardText)).orElse(null);
         } catch (NumberFormatException e) {
-            // Non-numeric input: no patron, status is already NOT_FOUND.
+            // Invalid input will be rejected by card validation.
         }
+
         String message = status.getMessage(patron);
         setStatus(message);
 
-        if (status.canCheckOut()) {
-            // Approved (possibly with an expiration warning): unlock book scanning.
-            cardField.setEnabled(false);
-            validateButton.setEnabled(false);
-            bookField.setEnabled(true);
-            addBookButton.setEnabled(true);
-            bookField.requestFocusInWindow();
-            
-            // TODO (Cal): show the patron's due-date reminders here via
-            // controller.getReminder(patron). Step-by-step instructions are
-            // in the class comment at the top of ReminderCatalog.java.
-            if (status == CardStatus.EXPIRING_SOON) {
-                JOptionPane.showMessageDialog(this, message,
-                        "Card expiring soon", JOptionPane.WARNING_MESSAGE);
-            }
-        } else {
-            // Not found, expired, or on hold: checkout stays locked.
+        if (!status.canCheckOut() || patron == null) {
             JOptionPane.showMessageDialog(this, message,
-                    "Card not accepted", JOptionPane.ERROR_MESSAGE);
+                    "Card Not Accepted", JOptionPane.ERROR_MESSAGE);
             cardField.selectAll();
             cardField.requestFocusInWindow();
+            return;
         }
+
+        currentPatron = patron;
+        currentReceipt = new Receipt();
+        cardField.setEnabled(false);
+        validateButton.setEnabled(false);
+        bookField.setEnabled(true);
+        addBookButton.setEnabled(true);
+
+        // Generate reminders from the same LoanCatalog used by checkout.
+        reminderCatalog.generateReminders(loanCatalog);
+        String reminders = reminderCatalog.printRemindersForPatron(patron);
+        if (!reminders.endsWith("has no reminders.") && !reminders.isBlank()) {
+            JOptionPane.showMessageDialog(this, reminders,
+                    "Library Due-Date Reminders", JOptionPane.INFORMATION_MESSAGE);
+        }
+
+        if (status == CardStatus.EXPIRING_SOON) {
+            JOptionPane.showMessageDialog(this, message,
+                    "Card Expiring Soon", JOptionPane.WARNING_MESSAGE);
+        }
+        setStatus("Card accepted. Scan a book barcode to continue.");
+        bookField.requestFocusInWindow();
     }
 
     private void onScanBook() {
-        // This is intentionally disabled until card validation is connected.
-        String barcode = bookField.getText().trim();
-        if (barcode.isEmpty())
+        if (currentPatron == null || currentReceipt == null) {
+            setStatus("Please validate a library card first.");
             return;
-        // TODO: Use LibraryController -> BookCatalog and only add available books.
-        scannedBooks.addElement(barcode);
+        }
+        String barcodeText = bookField.getText().trim();
+        int barcode;
+        try {
+            barcode = Integer.parseInt(barcodeText);
+        } catch (NumberFormatException e) {
+            setStatus("Enter a numeric book barcode.");
+            return;
+        }
+
+        Book book = bookCatalog.searchByBarcode(barcode);
+        if (book == null) {
+            setStatus("Book not found. Please see the front desk.");
+            return;
+        }
+        if (!book.isAvailable()) {
+            setStatus("This book is already checked out.");
+            return;
+        }
+        for (Book scanned : currentReceipt.getCart()) {
+            if (scanned.getBarcodeID() == barcode) {
+                setStatus("This book has already been scanned.");
+                return;
+            }
+        }
+
+        currentReceipt.addBook(book);
+        // printInfo() is provided by the team's Book class.
+        scannedBooks.addElement(book.printInfo().replace('\n', ' ').trim());
         bookField.setText("");
-        finishButton.setEnabled(!scannedBooks.isEmpty());
+        finishButton.setEnabled(currentReceipt.getReceiptSize() > 0);
+        setStatus("Book added. Scan another or press Finish Checkout.");
+        bookField.requestFocusInWindow();
     }
 
     private void onFinishCheckout() {
-        // TODO: Use CheckoutSystem/LoanCatalog, email a receipt,
-        // and ask whether a printed receipt is wanted.
-        JOptionPane.showMessageDialog(this,
-                "Checkout completion is not connected yet.",
-                "Backend not connected", JOptionPane.INFORMATION_MESSAGE);
+        if (currentPatron == null || currentReceipt == null ||
+                currentReceipt.getReceiptSize() == 0) {
+            setStatus("Please validate a card and scan at least one book.");
+            return;
+        }
+
+        try {
+            // Record the loan and update the shared BookCatalog.
+            loanCatalog.createLoan(currentReceipt, currentPatron);
+            bookCatalog.checkOutBooks(currentReceipt);
+
+            String receiptText = currentReceipt.printReceipt();
+            int printChoice = JOptionPane.showConfirmDialog(
+                    this, "Would you like to view a printable receipt?",
+                    "Receipt", JOptionPane.YES_NO_OPTION);
+
+            if (printChoice == JOptionPane.YES_OPTION) {
+                JOptionPane.showMessageDialog(this, receiptText,
+                        "Receipt Preview", JOptionPane.INFORMATION_MESSAGE);
+            }
+
+            JOptionPane.showMessageDialog(this,
+                    "Checkout recorded successfully.\n" +
+                            "Email delivery and physical printing are not implemented in this prototype.",
+                    "Checkout Complete", JOptionPane.INFORMATION_MESSAGE);
+            resetSession();
+        } catch (RuntimeException e) {
+            JOptionPane.showMessageDialog(this,
+                    "Checkout could not be completed: " + e.getMessage(),
+                    "Checkout Error", JOptionPane.ERROR_MESSAGE);
+        }
     }
 
     private void resetSession() {
+        currentPatron = null;
+        currentReceipt = null;
         cardField.setText("");
         cardField.setEnabled(true);
         validateButton.setEnabled(true);
@@ -159,6 +233,12 @@ public class PatronGUIStarter extends JFrame {
     }
 
     public static void main(String[] args) {
-        SwingUtilities.invokeLater(() -> new PatronGUIStarter().setVisible(true));
+        SwingUtilities.invokeLater(() -> {
+            UserCatalog users = UserCatalog.withSampleData();
+            BookCatalog books = new BookCatalog();
+            LoanCatalog loans = new LoanCatalog();
+            ReminderCatalog reminders = new ReminderCatalog();
+            new PatronGUIStarter(users, books, loans, reminders).setVisible(true);
+        });
     }
 }
