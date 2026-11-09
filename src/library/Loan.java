@@ -23,6 +23,7 @@ public class Loan {
 	public Patron getLoaner() {return loaner;}
 	public LocalDate getDueDate() {return dueDate;}
 	public LocalDate getIssueDate() {return issueDate;}
+	public boolean isOpen() {return loanOpen;}
 	
 // CONSTRUCTORS===================================
 	public Loan(Receipt r, Patron u) {

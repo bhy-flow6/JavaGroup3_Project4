@@ -2,6 +2,8 @@ package library;
 
 import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 
 /**
  * Holds every Book in the system, provides search functionality, and access to Book.
@@ -15,6 +17,7 @@ public class LoanCatalog {
 // GETTERS/SETTERS ===============================
 	public int getTotalCount() {return catalog.size();}
 	public LocalDate getLastUpdate() {return lastUpdated;}
+	public List<Loan> getAllLoans() {return Collections.unmodifiableList(catalog);} // Used by ReminderCatalog
 
 // CONSTRUCTORS===================================
 	public LoanCatalog() {
@@ -41,8 +44,10 @@ public class LoanCatalog {
 		return holder;
 	}
 	
-	public void createLoan (Receipt r, Patron p) {
+	public Loan createLoan (Receipt r, Patron p) {
 		Loan l = new Loan(r, p);
 		catalog.add(l);
+		lastUpdated = LocalDate.now();
+		return l;
 	}
 }
