@@ -16,7 +16,7 @@ public class Loan {
 	private Patron loaner;
 	private LocalDate dueDate;
 	private LocalDate issueDate;
-	private ArrayList<Book> loanedBooks; // As duplicate of the ArrayList made in the Receipt for construction
+	private ArrayList<Book> loanedBooks; // A duplicate of the ArrayList made in the Receipt for construction
 	 
 // GETTERS/SETTERS ===============================
 	public int getLoanID() {return loanID;}
@@ -31,7 +31,7 @@ public class Loan {
 		loaner = u;
 		loanedBooks = new ArrayList<>(r.getCart());
 		issueDate = LocalDate.now();
-		dueDate = issueDate.plusDays(14); // Default 2 week loan
+		dueDate = issueDate.plusDays(14); // Default is a 2 week loan
 	}
 	
 // METHODS =======================================
