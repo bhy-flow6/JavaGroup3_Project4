@@ -34,7 +34,7 @@ public class Receipt {
 		cart = new ArrayList<>();
 	}
 	
-	// Constructor with preloaded books for testing
+	// Testing constructor with preloaded books for testing
 	public Receipt(boolean test) {
 		LAST_ID++;
 		receiptID = LAST_ID;
