@@ -105,6 +105,9 @@ public class PatronGUIStarter extends JFrame {
             bookField.setEnabled(true);
             addBookButton.setEnabled(true);
             bookField.requestFocusInWindow();
+            // TODO (Cal): show the patron's due-date reminders here via
+            // controller.getReminder(patron). Step-by-step instructions are
+            // in the class comment at the top of ReminderCatalog.java.
             if (status == CardStatus.EXPIRING_SOON) {
                 JOptionPane.showMessageDialog(this, message,
                         "Card expiring soon", JOptionPane.WARNING_MESSAGE);
